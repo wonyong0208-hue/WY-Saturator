@@ -1,0 +1,37 @@
+
+name: Build WY Saturator for macOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Download source
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+
+      - name: Build VST3 and AU
+        run: cmake --build build --config Release --parallel 3
+
+      - name: Collect plugins
+        run: |
+          mkdir -p dist
+          find build -type d \( -name "*.vst3" -o -name "*.component" \) -prune -exec cp -R {} dist/ \;
+          ls -la dist
+          test -n "$(find dist -mindepth 1 -maxdepth 1 -print -quit)"
+
+      - name: Upload plugins
+        uses: actions/upload-artifact@v4
+        with:
+          name: WY-Saturator-macOS
+          path: dist/
